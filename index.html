@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SVG Invisibility Test Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@latest/dist/opentype.min.js"></script>
+<style>
+  body {
+    font-family: 'FifteenTwentyRegular', monospace;
+    text-align: center;
+    margin: 20px;
+  }
+  #svgContainer {
+    margin-bottom: 10px;
+    display: inline-block;
+    border: 1px solid #ccc;
+  }
+  textarea {
+    width: 100%;
+    max-width: 520px;
+    height: 250px;
+    margin: 0 auto;
+    display: block;
+    padding: 5px;
+    font-family: monospace;
+    font-size: 12px;
+    box-sizing: border-box;
+    resize: vertical;
+  }
+  button {
+    margin: 10px 0 20px 0;
+    font-size: 16px;
+    padding: 8px 20px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h2>SVG Invisibility Test Generator</h2>
+
+<button id="generateBtn">Generate SVG</button>
+<button id="downloadBtn" disabled>Download SVG</button>
+
+<textarea id="svgText" readonly></textarea>
+<div id="svgContainer"></div>
+
+<script>
+(() => {
+  const fontUrl = 'https://raw.githubusercontent.com/scruss/FifteenTwenty/master/FifteenTwenty.otf';
+  let font;
+
+  opentype.load(fontUrl, function(err, loadedFont) {
+    if (err) {
+      alert("Failed to load font.");
+      console.error(err);
+      return;
+    }
+    font = loadedFont;
+  });
+
+  const invisibilityAttributes = [
+    'visibility="hidden"',
+    'display="none"',
+    'opacity="0"',
+    'transform="scale(0)"',
+    'clip-path="url(#null)"',
+    'style="clip-path: inset(100%)"',
+    'style="filter: opacity(0)"',
+    'style="transform: scale(0)"',
+    'style="visibility: hidden"',
+    'style="display: none"',
+    'style="opacity: 0"'
+  ];
+
+  const generateSVG = () => {
+    if (!font) { alert("Font not loaded yet!"); return ''; }
+
+    const circleRadius = 100;
+    const padding = 10;
+    const strokeWidth = 5;
+    const labelHeight = 40;
+    const fontSize = 18;
+    const cols = 4;
+    const rows = 3;
+
+    const maxLabelLength = invisibilityAttributes.reduce((max, s) => Math.max(max, s.length), 0);
+    const minCellWidth = circleRadius * 2 + padding * 2;
+    const textWidth = maxLabelLength * fontSize * 0.55 + 20;
+    const cellWidth = Math.max(minCellWidth, textWidth);
+    const cellHeight = circleRadius * 2 + padding * 2 + labelHeight;
+    const totalWidth = cols * cellWidth;
+    const totalHeight = rows * cellHeight;
+
+    let svgParts = [];
+    svgParts.push(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">`
+    );
+
+    svgParts.push(`<rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="white"/>`);
+    svgParts.push(`<defs><clipPath id="null"></clipPath></defs>`);
+
+    const textOffset = circleRadius + 25;
+
+    for (let i = 0; i < invisibilityAttributes.length; i++) {
+      const attr = invisibilityAttributes[i];
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const cellX = col * cellWidth;
+      const cellY = row * cellHeight;
+      const cx = cellX + cellWidth / 2;
+      const cy = cellY + circleRadius + padding;
+
+      svgParts.push(
+        `<circle cx="${cx}" cy="${cy}" r="${circleRadius}" stroke="#000" stroke-width="${strokeWidth}" fill="#999" ${attr} />`
+      );
+
+      // Convert text to path
+      const path = font.getPath(attr, cx - (attr.length * fontSize * 0.27), cy + textOffset, fontSize);
+      const pathData = path.toPathData();
+      svgParts.push(`<path d="${pathData}" fill="black"/>`);
+    }
+
+    svgParts.push(`</svg>`);
+    return svgParts.join('\n');
+  };
+
+  const generateBtn = document.getElementById('generateBtn');
+  const svgContainer = document.getElementById('svgContainer');
+  const svgText = document.getElementById('svgText');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  generateBtn.addEventListener('click', () => {
+    const svgCode = generateSVG();
+    svgContainer.innerHTML = svgCode;
+    svgText.value = svgCode;
+    downloadBtn.disabled = false;
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const svgCode = svgText.value;
+    const blob = new Blob([svgCode], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'invisibility-test.svg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+})();
+</script>
+
+</body>
+</html>
